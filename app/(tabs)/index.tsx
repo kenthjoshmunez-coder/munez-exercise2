@@ -1,98 +1,200 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { questions } from "../../questions";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function App() {
+  const [screen, setScreen] = useState<"home" | "quiz" | "result">("home");
+  const [index, setIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
 
-export default function HomeScreen() {
+  const current = questions[index];
+
+  const selectAnswer = (choice: string) => {
+    setAnswers({ ...answers, [current.id]: choice });
+  };
+
+  const next = () => {
+    if (index < questions.length - 1) {
+      setIndex(index + 1);
+    } else {
+      calculateScore();
+      setScreen("result");
+    }
+  };
+
+  const previous = () => {
+    if (index > 0) setIndex(index - 1);
+  };
+
+  const calculateScore = () => {
+    let s = 0;
+    questions.forEach((q) => {
+      if (answers[q.id] === q.answer) s++;
+    });
+    setScore(s);
+    if (s > highScore) setHighScore(s);
+  };
+
+  const startQuiz = () => {
+    setIndex(0);
+    setAnswers({});
+    setScore(0);
+    setScreen("quiz");
+  };
+
+  if (screen === "home") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>📘 Quiz App</Text>
+        <TouchableOpacity style={styles.button} onPress={startQuiz}>
+          <Text style={styles.btnText}>Start Quiz</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (screen === "result") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}> Results</Text>
+        <Text style={styles.scoreText}>Your Score: {score}</Text>
+        <Text style={styles.scoreText}>Highest Score: {highScore}</Text>
+
+        <TouchableOpacity style={styles.button} onPress={startQuiz}>
+          <Text style={styles.btnText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      <Text style={styles.progress}>
+        Question {index + 1} / {questions.length}
+      </Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <Text style={styles.question}>{current.question}</Text>
+
+      {Object.keys(current.choices).map((key) => (
+        <TouchableOpacity
+          key={key}
+          style={[
+            styles.choice,
+            answers[current.id] === key && styles.selectedChoice,
+          ]}
+          onPress={() => selectAnswer(key)}
+        >
+          <Text style={styles.choiceText}>
+            {key}. {current.choices[key as keyof typeof current.choices]}
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.smallBtn} onPress={previous}>
+          <Text style={styles.smallBtnText}>Previous</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.smallBtn} onPress={next}>
+          <Text style={styles.smallBtnText}>
+            {index === questions.length - 1 ? "Finish" : "Next"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#F4F7FB",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#1A237E",
+    marginBottom: 30,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  progress: {
+    fontSize: 14,
+    color: "#5C6BC0",
+    marginBottom: 10,
+  },
+
+  question: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#0D47A1",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+
+  choice: {
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    width: "100%",
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "#BBDEFB",
+    elevation: 2,
+  },
+
+  selectedChoice: {
+    backgroundColor: "#BBDEFB",
+    borderColor: "#1976D2",
+  },
+
+  choiceText: {
+    fontSize: 16,
+    color: "#1A237E",
+  },
+
+  button: {
+    backgroundColor: "#1976D2",
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 30,
+  },
+
+  btnText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  row: {
+    flexDirection: "row",
+    marginTop: 25,
+    width: "100%",
+  },
+
+  smallBtn: {
+    flex: 1,
+    backgroundColor: "#E3F2FD",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginHorizontal: 10,
+  },
+
+  smallBtnText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0D47A1",
+  },
+
+  scoreText: {
+    fontSize: 20,
+    color: "#1A237E",
+    marginVertical: 8,
   },
 });
